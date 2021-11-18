@@ -1,6 +1,8 @@
 import { useSubfeed } from 'figurl';
+import { sleepMsecNum } from 'figurl/util/sleepMsec';
+import { SubfeedMessage } from 'figurl/viewInterface/kacheryTypes';
 import MountainWorkspace from 'MountainWorkspace/MountainWorkspace';
-import React, { FunctionComponent, useMemo } from 'react';
+import React, { FunctionComponent, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import parameterPlugin from './viewPlugins/parameterPlugin/parameterPlugin';
 import runOverviewPlugin from './viewPlugins/runOverviewPlugin/runOverviewPlugin';
 
@@ -23,8 +25,41 @@ export interface ViewProps {
     chains: Chain[]
 }
 
+const useSimulateLiveSubfeed = (messages: SubfeedMessage[] | undefined, opts: {doSimulate: boolean, delayMsec: number, refreshCode: number}) => {
+    const {doSimulate, delayMsec, refreshCode} = opts
+    const [simulateIndex, setSimulateIndex] = useState<number>(0)
+    const refreshCodeRef = useRef<number>(0)
+    useEffect(() => {
+        if (!doSimulate) return
+        refreshCodeRef.current = refreshCode
+        setSimulateIndex(0)
+        ;(async () => {
+            while (true) {
+                if (refreshCode !== refreshCodeRef.current) return
+                await sleepMsecNum(delayMsec)
+                setSimulateIndex(a => (a + 1))
+            }
+        })()
+    }, [refreshCode, delayMsec, doSimulate])
+    if ((doSimulate) && (messages)) {
+        return messages.slice(0, simulateIndex)
+    }
+    else {
+        return messages
+    }
+}
+
 const MCMCRunComponent: FunctionComponent<Props> = ({ width, height, runLabel, runUri }) => {
-    const { messages } = useSubfeed({ subfeedUri: runUri })
+    const { messages: messages0 } = useSubfeed({ subfeedUri: runUri })
+
+    const [simulateRefreshCode, setSimulateRefreshCode] = useState<number>(0)
+    const [doSimulate, setDoSimulate] = useState<boolean>(false)
+    const messages = useSimulateLiveSubfeed(messages0, {doSimulate, delayMsec: 1000, refreshCode: simulateRefreshCode})
+    const handleSimulateLive = useCallback(() => {
+        setSimulateRefreshCode(c => (c + 1))
+        setDoSimulate(true)
+    }, [])
+
     const records: Record[] = useMemo(() => {
         if (!messages) return []
         return ([] as Record[]).concat(...messages.map(msg => (msg.records as Record[])))
@@ -68,6 +103,7 @@ const MCMCRunComponent: FunctionComponent<Props> = ({ width, height, runLabel, r
             height={height}
             viewPlugins={viewPlugins}
             viewProps={viewProps}
+            onSimulateLive={handleSimulateLive}
         />
     )
 }

@@ -7,17 +7,19 @@ import MWViewContainer from './MWContainer';
 import MWViewLauncher from './MWViewLauncher';
 import { MWView, MWViewPlugin } from './MWViewPlugin';
 import MWViewWidget from './MWViewWidget';
+import { Button } from '@material-ui/core';
 
 type Props = {
     viewPlugins: MWViewPlugin[]
     viewProps: {[key: string]: any}
     width: number
     height: number
+    onSimulateLive: () => void
 }
 
 const initialLeftPanelWidth = 320
 
-const MountainWorkspace: FunctionComponent<Props> = ({width, height, viewPlugins, viewProps}) => {
+const MountainWorkspace: FunctionComponent<Props> = ({width, height, viewPlugins, viewProps, onSimulateLive}) => {
     const [openViews, openViewsDispatch] = useReducer(openViewsReducer, [])
 
     const launchIcon = <span style={{color: 'gray'}}><OpenInBrowserIcon /></span>
@@ -60,6 +62,7 @@ const MountainWorkspace: FunctionComponent<Props> = ({width, height, viewPlugins
                         plugins={viewPlugins}
                     />
                 </Expandable>
+                <Button onClick={onSimulateLive}>Simulate live feed</Button>
             </div>
             <MWViewContainer
                 onViewClosed={handleViewClosed}
